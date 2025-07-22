@@ -2,9 +2,10 @@ import { ArrowButton } from 'src/ui/arrow-button';
 import { Button } from 'src/ui/button';
 
 import styles from './ArticleParamsForm.module.scss';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Select } from 'src/ui/select';
 import {
+	ArticleStateType,
 	backgroundColors,
 	contentWidthArr,
 	defaultArticleState,
@@ -14,24 +15,23 @@ import {
 } from 'src/constants/articleProps';
 import { Separator } from 'src/ui/separator';
 import { RadioGroup } from 'src/ui/radio-group';
+import clsx from 'clsx';
+import { useOutsideClickClose } from 'src/ui/select/hooks/useOutsideClickClose';
 
 type ArticleParamsFormProps = {
-	currentStyle: typeof defaultArticleState;
-	submitArticleStyle: (newStyle: Partial<typeof defaultArticleState>) => void;
-	resetArticleStyle: () => typeof defaultArticleState;
+	changeStyle: (newStyle: Partial<ArticleStateType>) => void;
+	initialStyle?: ArticleStateType;
 };
 
-export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
+export const ArticleParamsForm = ({
+	changeStyle,
+	initialStyle = { ...defaultArticleState },
+}: ArticleParamsFormProps) => {
 	const [isParamsFormOpen, setIsParamsFormOpen] = useState(false);
 	const asideMenuRef = useRef<HTMLDivElement>(null);
 
-	const [style, setStyle] = useState({
-		fontFamilyOption: props.currentStyle.fontFamilyOption,
-		fontSizeOption: props.currentStyle.fontSizeOption,
-		fontColor: props.currentStyle.fontColor,
-		backgroundColor: props.currentStyle.backgroundColor,
-		contentWidth: props.currentStyle.contentWidth,
-	});
+	const initialStyleRef = useRef(initialStyle);
+	const [currentStyle, setStyle] = useState(initialStyleRef.current);
 
 	const handleArrowButtonClick = () => {
 		setIsParamsFormOpen(!isParamsFormOpen);
@@ -39,47 +39,31 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 
 	const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		props.submitArticleStyle(style);
+		changeStyle(currentStyle);
 	};
 
 	const handleFormReset = (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		const defaultStyle = props.resetArticleStyle();
-		setStyle({
-			fontFamilyOption: defaultStyle.fontFamilyOption,
-			fontSizeOption: defaultStyle.fontSizeOption,
-			fontColor: defaultStyle.fontColor,
-			backgroundColor: defaultStyle.backgroundColor,
-			contentWidth: defaultStyle.contentWidth,
-		});
+		setStyle(initialStyleRef.current);
+		changeStyle(initialStyleRef.current);
 	};
 
-	const handleClickOutside = (evt: MouseEvent) => {
-		if (
-			isParamsFormOpen &&
-			asideMenuRef.current &&
-			evt.target instanceof Node &&
-			!asideMenuRef.current.contains(evt.target)
-		) {
-			setIsParamsFormOpen(false);
-		}
-	};
-
-	useEffect(() => {
-		document.addEventListener('mousedown', handleClickOutside);
-		return () => {
-			document.removeEventListener('mousedown', handleClickOutside);
-		};
-	}, [isParamsFormOpen]);
+	useOutsideClickClose({
+		isOpen: isParamsFormOpen,
+		rootRef: asideMenuRef,
+		onChange: setIsParamsFormOpen,
+		onClose: () => setIsParamsFormOpen(false),
+	});
 
 	return (
 		<>
 			<ArrowButton isOpen={isParamsFormOpen} onClick={handleArrowButtonClick} />
 			<aside
 				ref={asideMenuRef}
-				className={`
-					${styles.container} 
-					${isParamsFormOpen ? styles.container_open : ''}`}>
+				className={clsx(
+					styles.container,
+					isParamsFormOpen && styles.container_open
+				)}>
 				<form
 					className={styles.form}
 					onReset={handleFormReset}
@@ -88,7 +72,7 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 					<Select
 						options={fontFamilyOptions}
 						title='Шрифт'
-						selected={style.fontFamilyOption}
+						selected={currentStyle.fontFamilyOption}
 						onChange={(fontFamilyOption) =>
 							setStyle((prev) => ({ ...prev, fontFamilyOption }))
 						}
@@ -96,7 +80,7 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 					<RadioGroup
 						options={fontSizeOptions}
 						title='Размер шрифта'
-						selected={style.fontSizeOption}
+						selected={currentStyle.fontSizeOption}
 						name={'Font-size'}
 						onChange={(fontSizeOption) =>
 							setStyle((prev) => ({ ...prev, fontSizeOption }))
@@ -105,7 +89,7 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 					<Select
 						options={fontColors}
 						title='Цвет шрифта'
-						selected={style.fontColor}
+						selected={currentStyle.fontColor}
 						onChange={(fontColor) =>
 							setStyle((prev) => ({ ...prev, fontColor }))
 						}
@@ -114,7 +98,7 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 					<Select
 						options={backgroundColors}
 						title='Цвет фона'
-						selected={style.backgroundColor}
+						selected={currentStyle.backgroundColor}
 						onChange={(backgroundColor) =>
 							setStyle((prev) => ({ ...prev, backgroundColor }))
 						}
@@ -122,7 +106,7 @@ export const ArticleParamsForm = (props: ArticleParamsFormProps) => {
 					<Select
 						options={contentWidthArr}
 						title='Ширина контента'
-						selected={style.contentWidth}
+						selected={currentStyle.contentWidth}
 						onChange={(contentWidth) =>
 							setStyle((prev) => ({ ...prev, contentWidth }))
 						}
